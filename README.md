@@ -245,6 +245,7 @@ Trigger a Railway redeploy for the change to take effect.
 | `COOKIE_SECURE` | No | `false` | Set `true` behind HTTPS |
 | `STUDENT_COOKIE_NAME` | No | `lms_student` | Auth cookie name |
 | `STUDENT_COOKIE_HTTPONLY` | No | `false` | Set `true` to hide cookie from JS |
+| `STUDENT_COOKIE_SAMESITE` | No | (auto) | For Vercel->Railway cross-site cookies, set `none` (with `COOKIE_SECURE=true`) |
 | `R2_ACCOUNT_ID` | If using R2 | — | Cloudflare account ID |
 | `R2_ACCESS_KEY_ID` | If using R2 | — | R2 API key ID |
 | `R2_SECRET_ACCESS_KEY` | If using R2 | — | R2 API secret |

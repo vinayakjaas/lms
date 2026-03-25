@@ -25,6 +25,10 @@ class Settings:
 
     # Browser auth: HttpOnly cookie name (student). Must match frontend + security.get_current_student.
     STUDENT_COOKIE_NAME: str = os.getenv("STUDENT_COOKIE_NAME", "lms_student")
+    # Controls cookie SameSite behavior for cross-site frontend -> backend requests.
+    # For production deployments where frontend and backend are on different domains (Vercel + Railway),
+    # set this to "none" and ensure COOKIE_SECURE=true.
+    STUDENT_COOKIE_SAMESITE: str = os.getenv("STUDENT_COOKIE_SAMESITE", "").strip().lower()
     # CORS: credentials + cookies require explicit origins (not "*").
     CORS_ORIGINS: list = [
         o.strip()

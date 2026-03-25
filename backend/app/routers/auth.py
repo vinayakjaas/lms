@@ -13,10 +13,14 @@ NO_STORE = {"Cache-Control": "no-store, no-cache, must-revalidate", "Pragma": "n
 
 
 def _student_token_cookie_params() -> dict:
+    # Cross-site requests (Vercel frontend -> Railway backend) require SameSite=None; otherwise
+    # browsers withhold the cookie on fetch/XHR, and the backend won't see the JWT after refresh.
+    # We default to "none" when COOKIE_SECURE=true, but allow overriding via env var.
+    samesite = settings.STUDENT_COOKIE_SAMESITE or ("none" if settings.COOKIE_SECURE else "lax")
     return {
         "key": settings.STUDENT_COOKIE_NAME,
         "httponly": settings.STUDENT_COOKIE_HTTPONLY,
-        "samesite": "lax",
+        "samesite": samesite,
         "max_age": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         "path": "/",
         "secure": settings.COOKIE_SECURE,
