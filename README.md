@@ -219,6 +219,8 @@ The `vercel.json` file at `frontend/vercel.json` ensures all routes are handled 
 }
 ```
 
+> Extra safety: there is also a `vercel.json` at the repo root (`/vercel.json`) so SPA rewrites still work even if Vercel’s “Root Directory” setting is set to the repository root.
+
 ### Step 4 — Update backend CORS
 
 Once your Vercel URL is known (e.g. `https://yourapp.vercel.app`), update the Railway env var:
