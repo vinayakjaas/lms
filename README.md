@@ -41,6 +41,8 @@ lms/
 │   │   ├── services/  # r2_storage, seed_data, etc.
 │   │   └── utils/
 │   ├── railway.toml   # Railway deployment config
+│   ├── Procfile       # Optional process type (Railway / Heroku-style)
+│   ├── runtime.txt    # Nixpacks Python version (3.12)
 │   ├── .env.example   # Backend env template
 │   └── requirements.txt
 │
@@ -70,7 +72,7 @@ lms/
 ### Prerequisites
 
 - Node.js ≥ 18
-- Python ≥ 3.11
+- Python **3.12** (recommended; matches Railway `runtime.txt`; 3.11–3.13 also work with current pins)
 - A running MongoDB instance or MongoDB Atlas connection string
 
 ### Backend
@@ -155,7 +157,7 @@ Railway auto-deploys on every push to the connected branch. The `railway.toml` f
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+startCommand = "sh -c 'exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}'"
 healthcheckPath = "/health"
 ```
 
@@ -173,7 +175,9 @@ Railway’s health check calls `GET /health`. You usually see **service unavaila
 
 3. **Atlas network access** — In MongoDB Atlas → **Network Access**, allow **`0.0.0.0/0`** (or Railway’s egress IPs) so the deployed container can reach the cluster.
 
-4. **Startup failed** — If init or seed throws, `/health` returns **503** with a `detail` message. Check **Railway → Deployments → Logs** for `Database init or seed failed`.
+4. **Startup failed** — If init or seed throws, `/health` still returns **200** with `"status":"degraded"`, `"ready":false`, and `"detail"`. Use **`GET /health/ready`** for a strict check (returns **503** until the database is usable). Check **Railway → Deployments → Logs** for `Database init or seed failed`.
+
+5. **`ImportError: cannot import name '_QUERY_OPTIONS' from 'pymongo.cursor'`** — Pip installed **PyMongo 4.16+** while **Motor 3.3.x** expected older internals. This repo pins **Motor 3.7.1**, which supports current PyMongo 4.x. Run `pip install -r requirements.txt` again (or delete `venv` and recreate it) so versions match `requirements.txt`, then redeploy.
 
 After fixing variables, redeploy or restart the service.
 
@@ -265,7 +269,7 @@ Trigger a Railway redeploy for the change to take effect.
 
 ## Post-Deployment Checklist
 
-- [ ] Backend `/health` endpoint returns `{"status": "healthy"}`
+- [ ] Backend `/health` returns `"ready": true` and `"status": "healthy"` (or open `/health/ready` and get 200)
 - [ ] Backend `/docs` (Swagger UI) is accessible
 - [ ] `CORS_ORIGINS` on Railway includes your exact Vercel URL (no trailing slash)
 - [ ] `COOKIE_SECURE=true` is set on Railway (HTTPS is enforced)

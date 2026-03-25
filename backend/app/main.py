@@ -95,24 +95,35 @@ async def root():
 
 @app.get("/health")
 async def health(request: Request):
+    """
+    Liveness for Railway / load balancers: always HTTP 200 once Uvicorn is serving.
+    Use the `ready` field (or GET /health/ready) to know if MongoDB finished initializing.
+    """
     st = request.app.state
+    base = {"service": settings.PROJECT_NAME}
+
     if getattr(st, "db_error", None):
-        return JSONResponse(
-            status_code=503,
-            content={
-                "status": "unhealthy",
-                "database": "error",
-                "detail": st.db_error,
-            },
-        )
-    if not getattr(st, "db_ready", False):
-        # 200 so load balancers mark the process up while MongoDB is still connecting.
         return {
+            **base,
+            "status": "degraded",
+            "ready": False,
+            "database": "error",
+            "detail": st.db_error,
+        }
+    if not getattr(st, "db_ready", False):
+        return {
+            **base,
             "status": "starting",
+            "ready": False,
             "database": "connecting",
         }
 
-    result = {"status": "healthy", "database": "connected"}
+    result = {
+        **base,
+        "status": "healthy",
+        "ready": True,
+        "database": "connected",
+    }
 
     from app.services.r2_storage import is_r2_enabled
 
@@ -129,4 +140,25 @@ async def health(request: Request):
             result["r2_status"] = f"error: {str(e)}"
 
     return result
+
+
+@app.get("/health/ready")
+async def health_ready(request: Request):
+    """Strict readiness: 503 until MongoDB init + seed succeeded (for manual checks or future orchestrators)."""
+    st = request.app.state
+    if getattr(st, "db_error", None):
+        return JSONResponse(
+            status_code=503,
+            content={
+                "ready": False,
+                "database": "error",
+                "detail": st.db_error,
+            },
+        )
+    if not getattr(st, "db_ready", False):
+        return JSONResponse(
+            status_code=503,
+            content={"ready": False, "database": "connecting"},
+        )
+    return {"ready": True, "database": "connected"}
 

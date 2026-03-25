@@ -7,9 +7,12 @@ python-dotenv==1.0.1
 aiofiles==23.2.1
 reportlab==4.1.0
 qrcode[pil]==7.4.2
-pillow==10.2.0
+# 11+ has prebuilt wheels for newer Python (e.g. 3.14); 10.x may fail to build from source.
+pillow>=11.0.0,<12
 httpx==0.27.0
-motor==3.3.2
+# Motor 3.3.x breaks with PyMongo 4.16+ (_QUERY_OPTIONS removed). Keep these aligned.
+motor==3.7.1
+pymongo>=4.9,<5
 beanie==1.25.0
 pydantic[email]==2.6.1
 boto3>=1.34.0
