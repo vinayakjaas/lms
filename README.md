@@ -163,6 +163,20 @@ healthcheckPath = "/health"
 
 After deployment, Railway gives you a public URL like `https://lms-backend-production.up.railway.app`. Copy it — you'll need it for the frontend.
 
+### Railway troubleshooting: “service unavailable” on `/health`
+
+Railway’s health check calls `GET /health`. You usually see **service unavailable** when either:
+
+1. **Nothing was listening yet** — Older versions of this app blocked HTTP until MongoDB finished connecting and seeding ran. That is fixed: the server starts immediately and `/health` returns `{"status":"starting","database":"connecting"}` with HTTP 200 while MongoDB connects. After the DB is ready, the same path returns full health (including optional R2 checks).
+
+2. **`MONGODB_URL` is missing or wrong** — If `MONGODB_URL` is not set in Railway, the app falls back to `mongodb://localhost:27017`, which will **not** work on Railway. Set `MONGODB_URL` to your **MongoDB Atlas** connection string (same as local `.env`).
+
+3. **Atlas network access** — In MongoDB Atlas → **Network Access**, allow **`0.0.0.0/0`** (or Railway’s egress IPs) so the deployed container can reach the cluster.
+
+4. **Startup failed** — If init or seed throws, `/health` returns **503** with a `detail` message. Check **Railway → Deployments → Logs** for `Database init or seed failed`.
+
+After fixing variables, redeploy or restart the service.
+
 ---
 
 ## Deploying the Frontend on Vercel

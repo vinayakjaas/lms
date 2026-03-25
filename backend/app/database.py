@@ -8,7 +8,12 @@ client: AsyncIOMotorClient = None
 async def init_db():
     """Initialize MongoDB connection and Beanie ODM."""
     global client
-    client = AsyncIOMotorClient(settings.MONGODB_URL)
+    # Fail fast on bad host / network (e.g. missing MONGODB_URL on Railway defaults to localhost).
+    client = AsyncIOMotorClient(
+        settings.MONGODB_URL,
+        serverSelectionTimeoutMS=15_000,
+        connectTimeoutMS=15_000,
+    )
     db = client[settings.MONGODB_DB_NAME]
 
     from app.models.user import University, College, Student, Admin
