@@ -290,7 +290,7 @@ Trigger a Railway redeploy for the change to take effect.
 
 ### Authentication
 
-- Student auth uses an **HttpOnly-compatible cookie** (`lms_student`) alongside an `Authorization: Bearer <token>` header. The token is read from the cookie by `api.js` and injected into every request.
+- Student auth uses an **HttpOnly-compatible cookie** (`lms_student`) alongside an `Authorization: Bearer <token>` header. `api.js` prefers the cookie, then falls back to **`localStorage` (`lms_student_jwt`)** after login/register. That fallback is needed when the **frontend and API are on different domains** (e.g. Vercel + Railway): the Railway cookie is **third-party** for the Vercel origin, and Safari / ITP often drops it on refresh even when `SameSite=None; Secure`.
 - Admin auth uses `localStorage` (`adminToken`).
 
 ### File Uploads
@@ -305,4 +305,3 @@ Trigger a Railway redeploy for the change to take effect.
 ### Database
 
 - MongoDB Atlas (free M0 tier works for development). Enable **network access for all IPs (`0.0.0.0/0`)** in Atlas, or add Railway's outbound IP ranges.
-# lms

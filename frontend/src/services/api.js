@@ -5,6 +5,9 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 /** Must match backend `STUDENT_COOKIE_NAME` (default lms_student). */
 export const STUDENT_COOKIE_NAME = import.meta.env.VITE_STUDENT_COOKIE_NAME || 'lms_student';
 
+/** First-party fallback when API is on another domain (e.g. Vercel + Railway): third-party cookies often clear on refresh (Safari ITP). */
+export const STUDENT_TOKEN_STORAGE_KEY = 'lms_student_jwt';
+
 function readCookie(name) {
     const prefix = `${name}=`;
     const chunks = `; ${document.cookie}`.split(';');
@@ -17,14 +20,46 @@ function readCookie(name) {
     return '';
 }
 
-/** Student JWT lives in this cookie (set by API on login/register); not in localStorage. */
+/** Student JWT from cookie (same-site or when browser keeps third-party cookie). */
 export function getStudentTokenFromCookie() {
     return readCookie(STUDENT_COOKIE_NAME).trim();
 }
 
+/** Prefer cookie, then localStorage (cross-site SPA). */
+export function getStudentAccessToken() {
+    const fromCookie = getStudentTokenFromCookie();
+    if (fromCookie) return fromCookie;
+    try {
+        return (localStorage.getItem(STUDENT_TOKEN_STORAGE_KEY) || '').trim();
+    } catch {
+        return '';
+    }
+}
+
+export function setStudentAccessToken(token) {
+    const t = (token || '').trim();
+    if (!t) return;
+    try {
+        localStorage.setItem(STUDENT_TOKEN_STORAGE_KEY, t);
+    } catch {
+        /* ignore quota / private mode */
+    }
+}
+
 export function clearStudentAuthCookie() {
-    const secure = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
-    document.cookie = `${STUDENT_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
+    if (typeof window === 'undefined') return;
+    const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+    const sameSite = window.location.protocol === 'https:' ? 'None' : 'Lax';
+    document.cookie = `${STUDENT_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=${sameSite}${secure}`;
+}
+
+export function clearStudentSessionClient() {
+    clearStudentAuthCookie();
+    try {
+        localStorage.removeItem(STUDENT_TOKEN_STORAGE_KEY);
+    } catch {
+        /* ignore */
+    }
 }
 
 const api = axios.create({
@@ -55,7 +90,7 @@ api.interceptors.request.use((config) => {
     // Student routes must never send adminToken; admin routes (except login) use adminToken.
     const token = isAdminCall && !isAdminLogin
         ? localStorage.getItem('adminToken')
-        : getStudentTokenFromCookie();
+        : getStudentAccessToken();
     const trimmed = token ? String(token).trim() : '';
     if (trimmed) {
         config.headers.Authorization = `Bearer ${trimmed}`;
@@ -75,8 +110,8 @@ api.interceptors.response.use(
             if (url.includes('/admin/') && !url.includes('/admin/login')) {
                 localStorage.removeItem('adminToken');
                 localStorage.removeItem('adminUser');
-            } else if (!url.includes('/admin/') && getStudentTokenFromCookie()) {
-                clearStudentAuthCookie();
+            } else if (!url.includes('/admin/') && getStudentAccessToken()) {
+                clearStudentSessionClient();
                 localStorage.removeItem('user');
                 fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
                 const p = window.location.pathname;

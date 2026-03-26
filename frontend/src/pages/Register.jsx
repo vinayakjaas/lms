@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { authAPI, adminAPI } from '../services/api';
+import { authAPI, adminAPI, setStudentAccessToken } from '../services/api';
 import { UserPlus, ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -207,6 +207,9 @@ export default function Register() {
             });
 
             const res = await authAPI.register(fd);
+            if (res.data?.access_token) {
+                setStudentAccessToken(res.data.access_token);
+            }
             await login(res.data.user);
             toast.success('Registration successful! 🎉');
             navigate('/dashboard');

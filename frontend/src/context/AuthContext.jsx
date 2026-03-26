@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { authAPI, getStudentTokenFromCookie, clearStudentAuthCookie } from '../services/api';
+import { authAPI, getStudentAccessToken, clearStudentSessionClient } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -13,12 +13,12 @@ export function AuthProvider({ children }) {
         } catch {
             /* still clear client state */
         }
-        clearStudentAuthCookie();
+        clearStudentSessionClient();
         localStorage.removeItem('user');
         setUser(null);
     }, []);
 
-    /** After login/register, JWT is in cookie (`lms_student`); APIs send `Authorization: Bearer <jwt>`. */
+    /** After login/register: cookie may be set for API host; localStorage mirrors JWT for cross-site (Vercel→Railway). */
     const login = useCallback(async (userData) => {
         localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
@@ -43,9 +43,9 @@ export function AuthProvider({ children }) {
     useEffect(() => {
         let cancelled = false;
         const init = async () => {
-            const cookieToken = getStudentTokenFromCookie();
+            const studentToken = getStudentAccessToken();
             const savedUser = localStorage.getItem('user');
-            if (!cookieToken) {
+            if (!studentToken) {
                 if (savedUser) localStorage.removeItem('user');
                 if (!cancelled) setLoading(false);
                 return;
@@ -75,7 +75,7 @@ export function AuthProvider({ children }) {
                 localStorage.setItem('user', JSON.stringify(merged));
             } catch {
                 if (!cancelled) {
-                    clearStudentAuthCookie();
+                    clearStudentSessionClient();
                     localStorage.removeItem('user');
                     setUser(null);
                 }

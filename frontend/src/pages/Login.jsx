@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { authAPI } from '../services/api';
+import { authAPI, setStudentAccessToken } from '../services/api';
 import { LogIn, Eye, EyeOff, Phone, Lock, GraduationCap } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -28,6 +28,9 @@ export default function Login() {
         setLoading(true);
         try {
             const res = await authAPI.login({ username, password });
+            if (res.data?.access_token) {
+                setStudentAccessToken(res.data.access_token);
+            }
             await login(res.data.user);
             toast.success('Welcome back! 🎉');
             navigate('/dashboard');
